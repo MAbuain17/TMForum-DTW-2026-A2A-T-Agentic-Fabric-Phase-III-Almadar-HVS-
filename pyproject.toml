@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "almadar-agent-fabric"
+version = "0.1.0"
+description = "Enterprise service fulfilment through a governed telecom agent fabric"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+dependencies = []
+
+[project.scripts]
+almadar-fabric = "almadar_fabric.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["almadar_fabric*"]
+
+[tool.setuptools.package-data]
+almadar_fabric = ["web/*", "data/*.json"]
