@@ -1,20 +1,140 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Almadar | Enterprise service fulfilment</title>
-  <link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script>
-</head>
-<body>
-  <header><a class="brand" href="/">a<span>l</span>madar <small>AGENT FABRIC</small></a><div class="header-note"><span class="dot"></span> LOCAL SANDBOX <span class="divider">/</span> HVS 03</div></header>
-  <main>
-    <section class="hero"><div><div class="eyebrow">TM FORUM CATALYST · C26.0.910 · PORTFOLIO IMPLEMENTATION</div><h1>From enterprise intent<br>to a verified service.</h1><p class="intro">An Almadar Aljadid scenario for coordinated service fulfilment across business, access, transport and assurance agents.</p></div><div class="hero-mark" aria-hidden="true"><span>03</span><small>ENTERPRISE<br>FULFILMENT</small></div></section>
-    <div class="workspace">
-      <aside class="panel order-panel"><div class="section-label">01 / SERVICE INTENT</div><h2>Enterprise connectivity</h2><div class="customer">Demo Enterprise<small>Tripoli branch · fictional customer</small></div><dl><div><dt>Committed bandwidth</dt><dd>200 <span>Mbps</span></dd></div><div><dt>Maximum latency</dt><dd>20 <span>ms</span></dd></div><div><dt>Provisioning budget</dt><dd>2,000 <span>LYD</span></dd></div></dl><label for="scenario">Operating condition</label><select id="scenario"><option value="ready">Ready for activation</option></select><button id="run" disabled>Run fulfilment <span aria-hidden="true">↗</span></button><p class="footnote">Deterministic adapters and synthetic inventory. No live network changes or customer data.</p><div class="policy-note"><span>OPERATOR POLICY</span><p>Verify identity. Respect bandwidth, latency and budget. Validate before completion. Escalate if the plan is infeasible.</p></div></aside>
-      <section class="panel flow-panel"><div class="flow-heading"><div><div class="section-label">02 / COORDINATED EXECUTION</div><h2>One process. Separate domains.</h2></div><span class="chip" id="status">Ready</span></div><div class="agent-flow" id="agents"><div class="empty">Run the scenario to inspect agent discovery and task handoffs.</div></div><div class="outcome" id="outcome" aria-live="polite"><div class="section-label">SERVICE OUTCOME</div><p>Activation is confirmed only after the service passes its acceptance tests.</p></div><div class="metric-grid"><div><span>Agent handoffs</span><strong id="handoffs">—</strong></div><div><span>Service state</span><strong id="service">Pending</strong></div><div><span>Audit chain</span><strong id="audit-state">—</strong></div></div></section>
-    </div>
-    <section class="panel evidence-panel"><div class="flow-heading"><div><div class="section-label">03 / DECISION EVIDENCE</div><h2>Follow the handoffs.</h2></div><button id="download" class="secondary" disabled>Export run JSON ↓</button></div><div id="trace"><p class="empty">Task contracts, policy decisions and agent evidence will appear here.</p></div></section>
-    <footer><span>Independent portfolio adaptation · Almadar Aljadid enterprise fulfilment</span><a href="https://www.tmforum.org/catalysts/projects/C26.0.910/agent-fabric-a2at-runtime-phase-iii" target="_blank" rel="noopener">Catalyst project ↗</a></footer>
-  </main>
-</body>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Almadar | Agent Fabric</title>
+    <link rel="stylesheet" href="/style.css" />
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <main>
+      <header>
+        <a class="brand" href="/">AF<span>AGENT FABRIC</span></a
+        ><span class="pill">C26.0.910 · PHASE III</span
+        ><a href="https://github.com/MAbuain17/almadar-agent-fabric"
+          >Repository ↗</a
+        >
+      </header>
+      <section class="intro">
+        <div>
+          <p class="eyebrow">ALMADAR ALJADID / MOBILE OPERATOR</p>
+          <h1>
+            Mobile service assurance.<br /><span
+              >One fabric. Multiple domains.</span
+            >
+          </h1>
+          <p class="lede">
+            HVS1 · Cross-domain fault management across RAN and transport.<br />Follow
+            the operator process from an anomaly to verified service
+            restoration.
+          </p>
+        </div>
+        <div class="controls">
+          <label for="scenario">Operating condition</label
+          ><select id="scenario"></select
+          ><button id="run">Run assurance</button
+          ><small>Synthetic network · Local reference implementation</small>
+        </div>
+      </section>
+      <section class="metrics" aria-label="Incident and service measurements">
+        <div>
+          <span>INCIDENT</span><strong id="incident">ALM-FLT-001</strong
+          ><small id="area">Tripoli demo cluster</small>
+        </div>
+        <div>
+          <span>SUBSCRIBER IMPACT</span><strong id="subscribers">840</strong
+          ><small>Aggregate affected mobile subscribers</small>
+        </div>
+        <div>
+          <span>DOWNLINK THROUGHPUT</span
+          ><strong id="throughput">2.4 <em>Mbps</em></strong
+          ><small id="throughput-note">Closure threshold ≥ 15 Mbps</small>
+        </div>
+        <div>
+          <span>PACKET LOSS</span><strong id="loss">8.2 <em>%</em></strong
+          ><small id="loss-note">Closure threshold ≤ 1%</small>
+        </div>
+      </section>
+      <section class="panel statusbar">
+        <span id="status" class="pill">READY TO INVESTIGATE</span>
+        <p id="reason">
+          The three affected cells share a degraded optical backhaul interface.
+        </p>
+        <button id="export" disabled>Export run ↓</button>
+      </section>
+      <div class="columns">
+        <section class="panel">
+          <div class="section-head">
+            <h2>Operator process</h2>
+            <span>Compiled BPMN / HVS1</span>
+          </div>
+          <div id="process" class="process">
+            <p class="muted">
+              Root cause and subscriber impact run in parallel, then join before
+              prioritisation.
+            </p>
+          </div>
+          <p class="caption">
+            Agents own successive handoffs. The trust gateway validates
+            dispatches; the BPMN graph supplies process context.
+          </p>
+        </section>
+        <section class="panel">
+          <div class="section-head">
+            <h2>Mobile network</h2>
+            <span>Synthetic topology</span>
+          </div>
+          <div id="topology" class="topology"></div>
+          <div id="actions" class="actions">
+            <p>RAN · Transport · Core</p>
+            <p class="muted">No domain actions yet.</p>
+          </div>
+        </section>
+      </div>
+      <section class="panel">
+        <div class="section-head">
+          <h2>Fabric services</h2>
+          <span>Local representations of project components</span>
+        </div>
+        <div class="fabric">
+          <div>01<b>Process graph</b><small>BPMN-derived context</small></div>
+          <div>
+            02<b>Prompt registry</b><small>Pinned Task-T templates</small>
+          </div>
+          <div>03<b>Agent registry</b><small>Capability discovery</small></div>
+          <div>
+            04<b>Trusted gateway</b><small>Sign → verify → execute</small>
+          </div>
+          <div>05<b>Governance</b><small>Advisory observations</small></div>
+          <div>
+            06<b>Audit & explain</b><small>Evidence-linked decisions</small>
+          </div>
+        </div>
+      </section>
+      <section class="panel">
+        <div class="section-head">
+          <h2>Inspect the run</h2>
+          <span id="audit-state">Awaiting execution</span>
+        </div>
+        <nav class="tabs" aria-label="Run inspection">
+          <button data-tab="trace" class="active">Agent handoffs</button
+          ><button data-tab="prompts">Task-T & trust</button
+          ><button data-tab="explain">Decision evidence</button
+          ><button data-tab="governance">Governance</button
+          ><button data-tab="design">Process graph</button>
+        </nav>
+        <div id="inspector">
+          <p class="muted">
+            Run a condition to inspect messages, platform attestations, and
+            agent decisions.
+          </p>
+        </div>
+      </section>
+      <footer>
+        <span>Almadar assurance adaptation · Agent Fabric, Phase III</span
+        ><span>Simulated adapters · No live operator data</span>
+      </footer>
+    </main>
+  </body>
 </html>
