@@ -1,5 +1,7 @@
 # Almadar Agent Fabric
 
+<img src="almadar_fabric/web/almadar-logo.png" alt="Almadar Aljadid" width="180">
+
 **Mobile service assurance across RAN and transport — an Almadar Aljadid adaptation of HVS1.**
 
 A portfolio reference implementation connected to my participation in [TM Forum Catalyst C26.0.910 — Agent Fabric: A2A-T Runtime, Phase III](https://www.tmforum.org/catalysts/projects/C26.0.910/agent-fabric-a2at-runtime-phase-iii). Almadar Aljadid participated as a champion mobile operator in a project bringing multiple operators and vendors together around telecom agent interoperability.
@@ -8,13 +10,17 @@ The use case starts with degraded mobile broadband across several cells sharing 
 
 ![Mobile assurance walkthrough](docs/assets/walkthrough.png)
 
+## Project materials
+
+Browse the [project reference library](docs/reference/README.md) for the Phase III overview, trust-score deck, TM Forum assets, cross-domain fault-resolution proposal, archived cover slide, design-time evaluation video and TMF939 sequence diagram.
+
 ## Run it
 
 Python 3.11 or later. No external services or API keys.
 
 ```sh
-git clone https://github.com/MAbuain17/almadar-agent-fabric.git
-cd almadar-agent-fabric
+git clone https://github.com/MAbuain17/TMForum-DTW-2026-A2A-T-Agentic-Fabric-Phase-III-Almadar-HVS-.git
+cd TMForum-DTW-2026-A2A-T-Agentic-Fabric-Phase-III-Almadar-HVS-
 python -m almadar_fabric serve
 ```
 
@@ -83,6 +89,6 @@ This is a runnable **reference adaptation**, not an Almadar deployment or a repr
 
 The source documents contain different governance proposals. This implementation follows the advisory trust-score variant and keeps payload enforcement separate from those scores. Synthetic measurements are not Catalyst benefit claims.
 
-See [architecture](docs/architecture.md), [source mapping](docs/source-map.md), [project context](docs/project-context.md) and the [operator playbook](playbooks/mobile-assurance.md). Meeting minutes, standalone vendor documents and the team workspace are not published.
+See [architecture](docs/architecture.md), [source mapping](docs/source-map.md), [project context](docs/project-context.md) and the [operator playbook](playbooks/mobile-assurance.md). Selected project artifacts are included in the reference library. Meeting minutes, unselected vendor documents and the rest of the team workspace are not published.
 
-Original repository code is available under the MIT license. Project and vendor names identify reference roles; their software and source materials retain their own ownership and licenses.
+Original repository code is available under the MIT license. Included project materials and logos retain their original ownership and source terms. Project and vendor names identify reference roles; their software and source materials retain their own ownership and licenses.

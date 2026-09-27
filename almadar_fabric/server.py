@@ -39,6 +39,7 @@ class Handler(BaseHTTPRequestHandler):
             "/": ("index.html", "text/html; charset=utf-8"),
             "/app.js": ("app.js", "application/javascript; charset=utf-8"),
             "/style.css": ("style.css", "text/css; charset=utf-8"),
+            "/almadar-logo.png": ("almadar-logo.png", "image/png"),
         }
         if path in assets:
             name, mime = assets[path]

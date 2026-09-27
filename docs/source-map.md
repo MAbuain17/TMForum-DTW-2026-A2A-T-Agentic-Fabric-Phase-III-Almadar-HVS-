@@ -1,6 +1,6 @@
 # Source mapping
 
-This map records which supplied project artifacts shaped the adaptation. Source files remain in the private team workspace. It records design lineage without redistributing internal documents.
+This map records which supplied project artifacts shaped the adaptation. The [reference library](reference/README.md) contains the selected decks, recording and architecture image supplied for publication. Other source files remain in the private team workspace. This map records design lineage.
 
 | Source artifact | Repository decision |
 | --- | --- |

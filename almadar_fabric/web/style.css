@@ -431,3 +431,6 @@ footer {
     gap: 15px;
   }
 }
+
+.operator-logo { width: 130px; height: 45px; object-fit: contain; flex-shrink: 0; }
+@media (max-width: 600px) { header { gap: 12px; } .brand span { display: none; } .operator-logo { width: 110px; } }

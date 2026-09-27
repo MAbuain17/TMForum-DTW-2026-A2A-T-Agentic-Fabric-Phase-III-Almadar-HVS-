@@ -33,7 +33,7 @@ class ServerTests(unittest.TestCase):
         return status, payload
 
     def test_browser_assets_and_api(self):
-        for path in ["/", "/style.css", "/app.js", "/api/scenarios"]:
+        for path in ["/", "/style.css", "/app.js", "/almadar-logo.png", "/api/scenarios"]:
             self.assertEqual(self.request("GET", path)[0], 200)
         status, payload = self.request(
             "POST",
