@@ -1,25 +1,11 @@
-# Project context and sources
+# Project context
 
-## Catalyst
+[Agent Fabric: A2A-T Runtime, Phase III](https://www.tmforum.org/catalysts/projects/C26.0.910/agent-fabric-a2at-runtime-phase-iii) is TM Forum Catalyst C26.0.910. Almadar Aljadid is a champion mobile operator in its multi-operator, multi-vendor collaboration.
 
-[Agent Fabric: A2A-T Runtime — Phase III, C26.0.910](https://www.tmforum.org/catalysts/projects/C26.0.910/agent-fabric-a2at-runtime-phase-iii) brings operators and vendors together around agent interoperability and governed telecom operations. The public project page identifies Almadar Aljadid as a champion and describes three high-value scenarios: cross-domain fault resolution, enterprise complaint handling and enterprise service fulfilment.
+The public project describes three HVS demonstrations: cross-domain service fault resolution across RAN and transport; enterprise SLA complaint handling; and enterprise service fulfilment. This repository develops **HVS1 for Almadar’s mobile assurance context**. The enterprise scenarios remain part of the wider Catalyst story, but they do not define this operator adaptation.
 
-The repository focuses on the third scenario. It is intended as a practical companion to a CV: a reviewer can inspect a concrete service process, run its decision paths, and see how agent handoffs retain operator constraints.
+The project’s five concerns are protocol, semantics, cooperation, governance and trust. Its open contributions separate A2A-T telecom semantics, OpenAN discovery/runtime services and the fabric’s gateway, evaluation, governance, audit and explainability. The local modules preserve those responsibilities without claiming to contain the official runtime.
 
-## Source-to-implementation mapping
+[OpenAN](https://openan.dev/) provides the broader open autonomous-network framework and identifies its SDK, Registry Center and Orchestration Center. Readers interested in integrating real services should follow the official project’s code and licenses. No upstream code is copied into this repository.
 
-| Source | What it informed | How it is used here |
-| --- | --- | --- |
-| Public Catalyst project page | Project identity, Almadar participation and three HVS scenarios | Linked as the authoritative project reference |
-| Team use-case development deck, `UCv3 Kevin -clean.pptx`, slides 3, 5 and 9 | Almadar fulfilment scope; access readiness, external identity and access-provider roles | Original scenario documentation; deck is not redistributed |
-| Team project architecture and main presentation | Registry, task constraints, governance, operator playbooks and decision evidence | Simplified local components; no production or conformance claims |
-| Colleague's project showcase webpage | Project framing and explanation of the three HVS scenarios | Context only; page, artwork and assets are not copied |
-| [OpenAN](https://openan.dev/) | Open runtime direction and component boundaries | Integration reference; no dependency on its runtime |
-| [OpenAN Python SDK](https://github.com/project-openan/a2a-t-sdk-python) | SDK scope and future transport integration | Linked; its code is not vendored |
-| [A2A telecom extension proposal #1796](https://github.com/a2aproject/A2A/issues/1796) | Task metadata, notification and negotiation concepts | Local illustrative contracts, explicitly separate from the proposal schemas |
-
-Internal drafts describe evolving responsibilities and proposed mechanisms. Those are background context, not definitive standards or evidence of deployed Almadar systems. The fulfilment parameters, inventory, costs, agent scores and customer are synthetic choices made for this implementation.
-
-## Repository boundary
-
-The original team folder is kept outside this Git repository. Meeting minutes, vendor folders, working decks, contact lists and source reports are not included. Shared Catalyst contributions remain credited to the team. The implementation demonstrates an adapted workflow; it does not claim ownership of the Catalyst platform or assert deployment on Almadar's network.
+The original team folder includes evolving proposals and vendor material. The implementation is grounded in the later HVS1 process, vendor matrix and Phase III overview; draft enterprise scenarios and future telecom knowledge-layer proposals are not presented as completed Almadar work.

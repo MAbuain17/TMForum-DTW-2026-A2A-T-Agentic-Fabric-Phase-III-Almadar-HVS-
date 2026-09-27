@@ -1,16 +1,16 @@
 # Almadar Agent Fabric
 
-**Enterprise service fulfilment across business, access, transport and assurance agents.**
+**Mobile service assurance across RAN and transport — an Almadar Aljadid adaptation of HVS1.**
 
-A portfolio implementation developed from my participation in [TM Forum Catalyst C26.0.910 — Agent Fabric: A2A-T Runtime, Phase III](https://www.tmforum.org/catalysts/projects/C26.0.910/agent-fabric-a2at-runtime-phase-iii). The Catalyst brought operators and vendors together around telecom agent interoperability, governance and operational accountability. Almadar Aljadid participated as a champion operator.
+A portfolio reference implementation connected to my participation in [TM Forum Catalyst C26.0.910 — Agent Fabric: A2A-T Runtime, Phase III](https://www.tmforum.org/catalysts/projects/C26.0.910/agent-fabric-a2at-runtime-phase-iii). Almadar Aljadid participated as a champion mobile operator in a project bringing multiple operators and vendors together around telecom agent interoperability.
 
-This repository explores the enterprise fulfilment scenario for Almadar: take a connectivity order, find the right agents, check whether the service can be delivered, provision it, and validate the result. It is a small, runnable reference implementation with synthetic data and simulated domain adapters. It is separate from the official Catalyst runtime and vendor implementations.
+The use case starts with degraded mobile broadband across several cells sharing a transport path. Agents analyse the fault and subscriber impact, agree on a scoped recovery action, coordinate network domains, and verify service measurements before closing the incident. The process follows the supplied **HVS1 cross-domain service fault management BPMN**, adapted to a synthetic Almadar mobile network.
 
-![Enterprise fulfilment walkthrough](docs/assets/walkthrough.png)
+![Mobile assurance walkthrough](docs/assets/walkthrough.png)
 
 ## Run it
 
-Python 3.11 or later. No API keys, paid services or runtime dependencies.
+Python 3.11 or later. No external services or API keys.
 
 ```sh
 git clone https://github.com/MAbuain17/almadar-agent-fabric.git
@@ -18,82 +18,71 @@ cd almadar-agent-fabric
 python -m almadar_fabric serve
 ```
 
-Open **http://127.0.0.1:8080**. Choose an operating condition, run fulfilment, and expand any decision to inspect its task contract or evidence. Export a run as JSON to review the full trace.
-
-For the command-line walkthrough:
+Open **http://127.0.0.1:8080**, choose an operating condition and run assurance. Inspect agent handoffs, structured tasks, trust checks, explanations and governance observations. Export a run as JSON.
 
 ```sh
-python -m almadar_fabric demo --output outputs/ready.json
-python -m almadar_fabric demo --scenario capacity-shortfall
-python -m almadar_fabric demo --scenario validation-failed
-python -m almadar_fabric verify outputs/ready.json
+python -m almadar_fabric compile --output outputs/process.json
+python -m almadar_fabric demo --output outputs/mobile.json
+python -m almadar_fabric demo --scenario prompt-tampered
+python -m almadar_fabric demo --scenario persistent-degradation
+python -m almadar_fabric verify outputs/mobile.json
 python -m unittest discover -s tests -v
 ```
 
-An order can also be supplied with `--order almadar_fabric/data/enterprise-order.json`. The quoted costs and network measurements are fictional. LYD is used to make the commercial constraint concrete, not to represent an Almadar tariff.
+Use `--incident path/to/incident.json` to supply an incident. The default represents 840 affected subscribers, three cells and a shared backhaul interface. Cell IDs, subscriber counts, measurements, location and recovery action are invented demo inputs, not Almadar operational data.
 
-## The use case
-
-A fictional enterprise requests a 200 Mbps connection to a Tripoli branch, with latency at or below 20 ms and a provisioning budget of 2,000 LYD. The fabric coordinates five agent roles through a shared task contract:
+## Operator process
 
 ```mermaid
 flowchart LR
-    O[Enterprise order] --> F[Service orchestrator]
-    F --> I[Identity verification]
-    I --> A[Access readiness]
-    A --> T[Transport feasibility]
-    T --> G{Operator policy}
-    G -->|Within constraints| P[Sandbox provisioning]
-    G -->|Infeasible| H[Operator review]
-    P --> V{Service validation}
-    V -->|Pass| C[Complete order]
-    V -->|Fail| R[Rollback and review]
+    A[Mobile service anomaly] --> B[Root cause and topology]
+    A --> C[Subscriber impact]
+    B --> D[Join evidence and prioritise]
+    C --> D
+    D --> E[Recommend remediation]
+    E --> F[Coordinate RAN / Transport / Core]
+    F --> G[Verify mobile service restoration]
+    G --> H{KPIs meet thresholds?}
+    H -->|Yes| I[Close incident]
+    H -->|No| J[Escalate]
 ```
 
-Identity and access readiness are prerequisites. A capacity shortfall produces a proposal for operator review; it never silently reduces the requested bandwidth. Budget and latency constraints are checked before provisioning. The order is completed only after throughput and latency tests pass.
+The local fault fixture is optical degradation on a shared backhaul interface. The transport adapter simulates a reroute; RAN and core adapters check their domains without changing configuration. Closure requires throughput and packet loss to meet the incident thresholds.
 
-| Operating condition | Outcome |
+## How this relates to the Catalyst
+
+The project distinguishes the **A2A-T semantic protocol**, the **OpenAN runtime**, and the **Agent Fabric trust and governance services**. This repository makes those responsibilities inspectable in a small local implementation:
+
+| Project responsibility | Local implementation |
 | --- | --- |
-| Ready for activation | Service configured and validated |
-| Access circuit needs construction | Survey/build plan requested; no provisioning |
-| Transport capacity is insufficient | Alternative capacity proposal; operator decision required |
-| Enterprise identity cannot be verified | Order rejected before network activity |
-| Provisioner has insufficient trust | Dispatch blocked by agent discovery policy |
-| Activation latency exceeds the SLA | Sandbox configuration rolled back |
+| Operator BPMN and knowledge context | Compile six activities, lane playbooks, graph edges and predecessor requirements |
+| Task-T prompt registry | Six structured prompt sections, version and template hash |
+| Capability discovery | Onboarded agent cards and skill aliases |
+| Trusted Data Gateway / trust layer | Incident scope checks, privacy redaction, platform signing and receiver verification |
+| Agent collaboration | Parallel analysis, evidence join and successive agent-owned handoffs |
+| Negotiation-T and Event-T | Local domain subscription and scoped feasibility decision records |
+| Governance, audit and explainability | Advisory score observations, hash-linked records and evidence references |
 
-## What is implemented
+Reference roles from the supplied HVS vendor matrix include RADCOM for anomaly/CX inputs, Amdocs for analysis and problem resolution, Huawei for RAN and Infosys for IP/transport. Every adapter here is original simulated code. The wider project also includes MEF.DEV process translation, Iquall evaluation and OpenAN fabric services; their production implementations are not bundled here.
 
-- Capability-based discovery using agent cards, onboarding state and a trust threshold.
-- Structured task handoffs with a shared context ID, explicit intent and operator constraints.
-- Feasibility negotiation and clear operator handoff conditions.
-- Separate deterministic adapters for identity, access, transport, provisioning and assurance.
-- Policy gates, post-activation checks and compensating rollback.
-- Hash-linked decision records with evidence references and a JSON export.
-- A local browser walkthrough, command-line runner and automated checks.
+## Conditions to explore
 
-The Task-T, Event-T and Negotiation-T concepts inform the local contracts. These contracts are **illustrative**: this project does not implement A2A wire transport, use the OpenAN SDK, or claim conformance to IG1453. Agents run in one process; adapter labels represent domain boundaries rather than connections to actual vendors. Trust scores are fixed fixtures. Audit hashes help detect edits against a retained head hash; they are not signatures or immutable storage.
-
-## Project guide
-
-| Path | Purpose |
+| Condition | Expected outcome |
 | --- | --- |
-| [`almadar_fabric/runtime.py`](almadar_fabric/runtime.py) | Fulfilment process and policy decisions |
-| [`almadar_fabric/agents.py`](almadar_fabric/agents.py) | Registry and simulated domain adapters |
-| [`almadar_fabric/models.py`](almadar_fabric/models.py) | Order, agent card and task contracts |
-| [`almadar_fabric/audit.py`](almadar_fabric/audit.py) | Audit chain creation and verification |
-| [`almadar_fabric/web/`](almadar_fabric/web/) | Browser walkthrough |
-| [`docs/architecture.md`](docs/architecture.md) | Design decisions and integration boundaries |
-| [`playbooks/enterprise-fulfilment.md`](playbooks/enterprise-fulfilment.md) | Almadar operator process |
-| [`docs/project-context.md`](docs/project-context.md) | Catalyst context and source attribution |
+| Shared backhaul degradation | Transport action, verified restoration |
+| Missing topology evidence | Operator escalation before any change |
+| Bulk reset requested | Gateway blocks unsafe scope |
+| Signed request altered | Receiver rejects the dispatch |
+| Subscriber identifiers included | TDG redacts identifiers; aggregate impact retained |
+| Service remains degraded | Recovery attempt recorded, incident stays open |
+| Transport agent not onboarded | No domain action executes |
 
-## Relationship to OpenAN and A2A-T
+## Scope
 
-[OpenAN](https://openan.dev/) provides the broader open runtime direction, including registration and orchestration components. Its [Python A2A-T SDK](https://github.com/project-openan/a2a-t-sdk-python) is the relevant integration starting point. The upstream [telecom extension proposal](https://github.com/a2aproject/A2A/issues/1796) describes task metadata, negotiation and event notification profiles.
+This is a runnable **reference adaptation**, not an Almadar deployment or a reproduction of the official multi-vendor demonstration. It has no live OSS access, vendor SDK integration, LLM calls or standards conformance certification. The JSON-RPC-shaped messages use a documented local metadata profile; the project’s A2A-T SDK is not installed. The process graph is an in-memory subset rather than a full knowledge graph, and HMAC illustrates the attestation boundary rather than implementing the project’s JWS/PKI trust profile. Audit verification detects edited records in an exported chain; it does not provide external anchoring or durable production logging.
 
-The next engineering step would be to replace local dispatch with SDK-backed calls, register real domain agents, and connect the policy gates to operator-approved OSS adapters. The [architecture notes](docs/architecture.md) spell out those boundaries.
+The source documents contain different governance proposals. This implementation follows the advisory trust-score variant and keeps payload enforcement separate from those scores. Synthetic measurements are not Catalyst benefit claims.
 
-## Attribution and scope
+See [architecture](docs/architecture.md), [source mapping](docs/source-map.md), [project context](docs/project-context.md) and the [operator playbook](playbooks/mobile-assurance.md). Meeting minutes, standalone vendor documents and the team workspace are not published.
 
-The Catalyst's architecture and scenarios are collaborative work. This repository contains an independent Almadar scenario adaptation and original demonstration code. It does not attribute the shared runtime, protocol or other vendors' agents to me. Meeting minutes, internal working decks and standalone vendor documents are excluded. No measured production benefits or formal autonomy level are claimed for this demo.
-
-MIT license applies to the original code and documentation in this repository. TM Forum, Almadar Aljadid and vendor names remain the property of their respective owners; mentioning them does not imply endorsement.
+Original repository code is available under the MIT license. Project and vendor names identify reference roles; their software and source materials retain their own ownership and licenses.
