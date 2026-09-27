@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "almadar-agent-fabric"
-version = "0.1.0"
-description = "Enterprise service fulfilment through a governed telecom agent fabric"
+version = "0.2.0"
+description = "Mobile service assurance through an agent fabric"
 requires-python = ">=3.11"
 license = {text = "MIT"}
 dependencies = []
@@ -17,4 +17,4 @@ almadar-fabric = "almadar_fabric.__main__:main"
 include = ["almadar_fabric*"]
 
 [tool.setuptools.package-data]
-almadar_fabric = ["web/*", "data/*.json"]
+almadar_fabric = ["web/*", "data/*.json", "data/*.bpmn"]

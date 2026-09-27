@@ -1,8 +1,0 @@
-{
-  "order_id": "ALM-ENT-001",
-  "customer": "Demo Enterprise",
-  "site": "Tripoli branch (fictional)",
-  "bandwidth_mbps": 200,
-  "max_latency_ms": 20,
-  "budget_lyd": 2000
-}

@@ -4,18 +4,26 @@ from copy import deepcopy
 from datetime import datetime, timezone
 import hashlib
 import json
+from threading import RLock
 
 
 def digest(record):
-    canonical = json.dumps(record, sort_keys=True, separators=(",", ":"), allow_nan=False)
+    canonical = json.dumps(
+        record, sort_keys=True, separators=(",", ":"), allow_nan=False
+    )
     return hashlib.sha256(canonical.encode()).hexdigest()
 
 
 class AuditLog:
     def __init__(self):
         self._records = []
+        self._lock = RLock()
 
     def append(self, kind, agent, summary, **details):
+        with self._lock:
+            self._append(kind, agent, summary, **details)
+
+    def _append(self, kind, agent, summary, **details):
         record = {
             "sequence": len(self._records) + 1,
             "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -38,7 +46,10 @@ def verify_chain(records):
     for sequence, original in enumerate(records, start=1):
         record = dict(original)
         claimed = record.pop("hash", None)
-        if record.get("sequence") != sequence or record.get("previous_hash") != previous:
+        if (
+            record.get("sequence") != sequence
+            or record.get("previous_hash") != previous
+        ):
             return False
         if digest(record) != claimed:
             return False

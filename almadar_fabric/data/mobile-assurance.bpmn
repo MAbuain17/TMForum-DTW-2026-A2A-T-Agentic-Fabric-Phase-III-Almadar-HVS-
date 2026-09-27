@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" targetNamespace="urn:almadar:assurance:demo">
+  <process id="Process_HVS1_Almadar" name="Almadar mobile service fault management" isExecutable="false">
+    <documentation>Original compact adaptation of the supplied HVS1 cross-domain fault management process. Synthetic network context.</documentation>
+    <laneSet id="Lanes">
+      <lane id="Lane_0" name="Digital Twin"><flowNodeRef>Task_RCA</flowNodeRef><flowNodeRef>Task_CEAndImpact</flowNodeRef><flowNodeRef>Task_Prioritize</flowNodeRef></lane>
+      <lane id="Lane_1" name="Complaint Management"><flowNodeRef>Task_HandleAndRemediate</flowNodeRef></lane>
+      <lane id="Lane_2" name="Network Operations"><flowNodeRef>Task_CrossDomainRemediation</flowNodeRef><flowNodeRef>Task_ConfirmRestoration</flowNodeRef></lane>
+    </laneSet>
+    <startEvent id="StartEvent_FaultDetected" name="Mobile service anomaly"/>
+    <parallelGateway id="Gateway_DTFork"/>
+    <parallelGateway id="Gateway_DTSync"/>
+    <task id="Task_RCA" name="Root cause analysis and topology correlation"/>
+    <task id="Task_CEAndImpact" name="Customer experience and subscriber impact analysis"/>
+    <task id="Task_Prioritize" name="Prioritise and route the mobile service problem"/>
+    <task id="Task_HandleAndRemediate" name="Handle complaint and recommend remediation"/>
+    <task id="Task_CrossDomainRemediation" name="Coordinate IP, core and RAN domain remediation"/>
+    <task id="Task_ConfirmRestoration" name="Confirm mobile service restoration"/>
+    <endEvent id="EndEvent_Restored" name="Service restored or escalated"/>
+    <sequenceFlow id="Flow_0" sourceRef="StartEvent_FaultDetected" targetRef="Gateway_DTFork"/>
+    <sequenceFlow id="Flow_1" sourceRef="Gateway_DTFork" targetRef="Task_RCA"/>
+    <sequenceFlow id="Flow_2" sourceRef="Gateway_DTFork" targetRef="Task_CEAndImpact"/>
+    <sequenceFlow id="Flow_3" sourceRef="Task_RCA" targetRef="Gateway_DTSync"/>
+    <sequenceFlow id="Flow_4" sourceRef="Task_CEAndImpact" targetRef="Gateway_DTSync"/>
+    <sequenceFlow id="Flow_5" sourceRef="Gateway_DTSync" targetRef="Task_Prioritize"/>
+    <sequenceFlow id="Flow_6" sourceRef="Task_Prioritize" targetRef="Task_HandleAndRemediate"/>
+    <sequenceFlow id="Flow_7" sourceRef="Task_HandleAndRemediate" targetRef="Task_CrossDomainRemediation"/>
+    <sequenceFlow id="Flow_8" sourceRef="Task_CrossDomainRemediation" targetRef="Task_ConfirmRestoration"/>
+    <sequenceFlow id="Flow_9" sourceRef="Task_ConfirmRestoration" targetRef="EndEvent_Restored"/>
+  </process>
+</definitions>

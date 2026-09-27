@@ -1,61 +1,195 @@
-"""Deterministic adapters for separate business, access and transport domains."""
+"""Capability discovery and synthetic RAN, transport, core and assurance adapters."""
 
-from dataclasses import replace
-from .models import AgentCard
+from copy import deepcopy
+from .models import DispatchDenied
+
+ALIASES = {
+    "root-cause-analysis": "fault.diagnose",
+    "customer-impact": "subscriber.impact",
+}
+ROLES = [
+    ("anomaly", "CX anomaly agent", "Assurance", "RADCOM", "event.detect"),
+    (
+        "diagnostics",
+        "Topology and RCA agent",
+        "Digital Twin",
+        "Amdocs",
+        "fault.diagnose",
+    ),
+    (
+        "impact",
+        "Subscriber impact agent",
+        "Digital Twin",
+        "RADCOM / Amdocs",
+        "subscriber.impact",
+    ),
+    (
+        "prioritise",
+        "Prioritisation agent",
+        "Digital Twin",
+        "Amdocs",
+        "fault.prioritize",
+    ),
+    (
+        "recommend",
+        "Problem resolution agent",
+        "Complaint Management",
+        "Amdocs",
+        "fault.recommend",
+    ),
+    (
+        "coordinate",
+        "Domain coordination agent",
+        "Network Operations",
+        "Amdocs / domain agents",
+        "fault.coordinate",
+    ),
+    ("ran", "RAN assurance agent", "RAN", "Huawei", "ran.check"),
+    (
+        "transport",
+        "IP / transport remediation agent",
+        "Transport",
+        "Infosys",
+        "transport.remediate",
+    ),
+    ("core", "Core assurance agent", "Core", "Local operator adapter", "core.check"),
+    (
+        "verify",
+        "Service restoration agent",
+        "Network Operations",
+        "CX and domain verification",
+        "service.verify",
+    ),
+]
 
 
 class Registry:
-    def __init__(self, cards):
-        self.cards = tuple(cards)
-        ids = [card.agent_id for card in self.cards]
-        if len(set(ids)) != len(ids):
-            raise ValueError("Agent IDs must be unique")
+    def __init__(self):
+        self.cards = {
+            row[0]: {
+                "agent_id": row[0],
+                "name": row[1],
+                "domain": row[2],
+                "reference_role": row[3],
+                "skills": [row[4]],
+                "onboarded": True,
+                "implementation": "local simulated adapter",
+            }
+            for row in ROLES
+        }
 
-    def discover(self, skill, minimum_trust=0.8):
-        eligible = [c for c in self.cards if skill in c.skills and c.onboarded and c.trust_score >= minimum_trust]
-        if not eligible:
-            raise LookupError(f"No authorised agent available for {skill}")
-        return sorted(eligible, key=lambda c: (-c.trust_score, c.agent_id))[0]
-
-
-def default_registry(scenario="ready"):
-    cards = [
-        AgentCard("identity", "Identity verifier", "Business", "Partner sandbox", ("identity.verify",), 0.96),
-        AgentCard("access", "Access planner", "Access", "Access adapter A", ("access.qualify",), 0.94),
-        AgentCard("transport", "Transport planner", "Transport", "Transport adapter B", ("transport.qualify",), 0.93),
-        AgentCard("provision", "Service provisioner", "Service", "Almadar sandbox", ("service.provision", "service.rollback"), 0.97),
-        AgentCard("assurance", "Service validator", "Assurance", "Assurance adapter C", ("service.validate",), 0.95),
-    ]
-    if scenario == "untrusted-agent":
-        cards[3] = replace(cards[3], trust_score=0.42)
-    return Registry(cards)
+    def discover(self, skill):
+        skill = ALIASES.get(skill, skill)
+        for card in self.cards.values():
+            if card["onboarded"] and skill in card["skills"]:
+                return deepcopy(card)
+        raise DispatchDenied(f"No onboarded agent for {skill}")
 
 
-class SandboxAdapters:
-    """Every method is simulated. No OSS calls or network commands are issued."""
+def explain(summary, evidence):
+    return {
+        "summary": summary,
+        "evidence_refs": evidence,
+        "confidence": "fixture-derived; not calibrated",
+    }
 
-    def __init__(self, scenario):
-        self.scenario = scenario
-        self.active = False
 
-    def execute(self, skill, order):
-        if skill == "identity.verify":
-            return {"verified": self.scenario != "identity-rejected", "evidence": "synthetic/enterprise-register"}
-        if skill == "access.qualify":
-            return {"ready": self.scenario != "access-build", "capacity_mbps": 1000, "cost_lyd": 800,
-                    "medium": "fibre", "evidence": "synthetic/access-inventory"}
-        if skill == "transport.qualify":
-            return {"capacity_mbps": 100 if self.scenario == "capacity-shortfall" else 1000,
-                    "expected_latency_ms": 12, "cost_lyd": 500, "evidence": "synthetic/transport-inventory"}
-        if skill == "service.provision":
-            self.active = True
-            return {"service_id": f"SVC-{order.order_id}", "configured": True,
-                    "evidence": "synthetic/provisioning-receipt"}
-        if skill == "service.validate":
-            return {"throughput_mbps": order.bandwidth_mbps,
-                    "latency_ms": 45 if self.scenario == "validation-failed" else 12,
-                    "evidence": "synthetic/activation-test"}
-        if skill == "service.rollback":
-            self.active = False
-            return {"rolled_back": True, "evidence": "synthetic/rollback-receipt"}
-        raise ValueError(f"Unsupported skill: {skill}")
+class MobileTwin:
+    def __init__(self, incident, scenario):
+        self.incident, self.scenario, self.changed = incident, scenario, False
+        self.actions = []
+
+    def execute(self, skill, evidence):
+        i = self.incident
+        if skill == "fault.diagnose":
+            if self.scenario == "missing-topology":
+                raise DispatchDenied(
+                    "Topology evidence missing: cannot isolate the shared fault"
+                )
+            return {
+                "root_cause": "Optical interface degradation on shared backhaul",
+                "domain": "Transport",
+                "target": i.transport_id,
+                "alarms": ["RX_POWER_LOW", "INTERFACE_ERRORS"],
+                "explain": explain(
+                    "Three cells share the degraded transport path; no primary core fault.",
+                    ["topology", "optical-alarms"],
+                ),
+            }
+        if skill == "subscriber.impact":
+            return {
+                "affected_subscribers": i.affected_subscribers,
+                "cells": list(i.cell_ids),
+                "service": i.service,
+                "explain": explain(
+                    "Aggregate subscriber impact joins affected cells to the shared backhaul.",
+                    ["cell-kpis", "aggregate-session-count"],
+                ),
+            }
+        if skill == "fault.prioritize":
+            return {
+                "priority": "HIGH",
+                "owner_domain": evidence["Task_RCA"]["domain"],
+                "explain": explain(
+                    "Prioritisation combines root cause and subscriber impact.",
+                    ["Task_RCA", "Task_CEAndImpact"],
+                ),
+            }
+        if skill == "fault.recommend":
+            return {
+                "action": "reroute_backhaul",
+                "target": i.transport_id,
+                "requires": "feasibility and incident-scoped authority",
+                "explain": explain(
+                    "Use a healthy backup path while an optical inspection is scheduled.",
+                    ["Task_RCA", "Task_Prioritize"],
+                ),
+            }
+        if skill == "fault.coordinate":
+            return {
+                "domains": ["RAN", "Transport", "Core"],
+                "action": "reroute_backhaul",
+            }
+        if skill in ("ran.check", "core.check", "transport.remediate"):
+            domain = {
+                "ran.check": "RAN",
+                "core.check": "Core",
+                "transport.remediate": "Transport",
+            }[skill]
+            if skill == "transport.remediate":
+                self.changed = True
+            action = {
+                "domain": domain,
+                "changed": skill == "transport.remediate",
+                "action": (
+                    "reroute backhaul"
+                    if domain == "Transport"
+                    else "validate; no configuration change"
+                ),
+            }
+            self.actions.append(action)
+            return action
+        if skill == "service.verify":
+            throughput = (
+                24.6
+                if self.changed and self.scenario != "persistent-degradation"
+                else i.throughput_mbps
+            )
+            loss = (
+                0.3
+                if self.changed and self.scenario != "persistent-degradation"
+                else i.packet_loss_pct
+            )
+            restored = (
+                throughput >= i.min_throughput_mbps and loss <= i.max_packet_loss_pct
+            )
+            return {
+                "restored": restored,
+                "throughput_mbps": throughput,
+                "packet_loss_pct": loss,
+                "explain": explain(
+                    "Closure requires both throughput and packet-loss thresholds.",
+                    ["post-change-kpis", "domain-results"],
+                ),
+            }
+        raise DispatchDenied(f"Unsupported skill {skill}")

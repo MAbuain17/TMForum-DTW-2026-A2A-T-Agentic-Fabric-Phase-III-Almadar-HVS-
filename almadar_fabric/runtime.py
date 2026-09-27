@@ -1,97 +1,196 @@
-"""Execute the HVS3 operator process with policy gates at every handoff."""
+"""Agent-owned HVS1 handoffs against a compiled operator playbook."""
 
-from uuid import uuid4
-from .agents import SandboxAdapters, default_registry
+from concurrent.futures import ThreadPoolExecutor
+from copy import deepcopy
+from .agents import Registry, MobileTwin
 from .audit import AuditLog, verify_chain
-from .models import Order, Task
+from .gateway import GovernanceObserver, TrustGateway
+from .models import Incident, DispatchDenied
+from .process import compile_process, render_prompt
 
 SCENARIOS = {
-    "ready": "Ready for activation",
-    "access-build": "Access circuit requires construction",
-    "capacity-shortfall": "Transport capacity below requested bandwidth",
-    "identity-rejected": "Enterprise identity cannot be verified",
-    "untrusted-agent": "Provisioning agent below the trust threshold",
-    "validation-failed": "Post-activation latency exceeds the SLA",
+    "transport-fault": "Shared backhaul degradation",
+    "missing-topology": "Missing topology evidence",
+    "unsafe-action": "Bulk reset rejected",
+    "prompt-tampered": "Altered signed request rejected",
+    "privacy-redaction": "Subscriber identifiers redacted",
+    "persistent-degradation": "Service remains degraded",
+    "unregistered-agent": "Transport agent not onboarded",
 }
 
 
-def sample_order():
-    return Order("ALM-ENT-001", "Demo Enterprise", "Tripoli branch (fictional)", 200, 20, 2000)
+def sample_incident():
+    return Incident()
 
 
-def run(order=None, scenario="ready", registry=None, adapters=None):
+class AssuranceSession:
+    def __init__(self, incident, scenario):
+        self.incident = Incident.from_dict(incident.to_dict())
+        self.scenario, self.design = scenario, compile_process()
+        self.registry, self.audit, self.observer = (
+            Registry(),
+            AuditLog(),
+            GovernanceObserver(),
+        )
+        self.gateway = TrustGateway(self.audit, self.observer)
+        self.twin, self.results, self.messages = (
+            MobileTwin(self.incident, scenario),
+            {},
+            [],
+        )
+        if scenario == "unregistered-agent":
+            self.registry.cards["transport"]["onboarded"] = False
+
+    def dispatch(self, initiator, activity, evidence, skill=None):
+        template = deepcopy(self.design["templates"][activity])
+        if skill:
+            template.update(
+                id=activity + "/" + skill,
+                skill=skill,
+                required_evidence=["Task_CrossDomainRemediation"],
+                allowed_initiators=["coordinate"],
+            )
+            from .audit import digest
+
+            template["template_hash"] = digest(
+                {k: v for k, v in template.items() if k != "template_hash"}
+            )
+        card = self.registry.discover(template["skill"])
+        self.audit.append(
+            "discover",
+            initiator,
+            "Capability discovered",
+            skill=template["skill"],
+            executor=card["agent_id"],
+        )
+        payload = {
+            "initiator": initiator,
+            "executor": card["agent_id"],
+            "activity": template["id"],
+            "skill": template["skill"],
+            "template_hash": template["template_hash"],
+            "structured_prompt": render_prompt(template, self.incident, evidence),
+            "evidence": deepcopy(evidence),
+        }
+        if self.scenario == "privacy-redaction" and activity == "Task_CEAndImpact":
+            payload["subscriber_ids"] = ["synthetic-subscriber-001"]
+        if self.scenario == "unsafe-action" and skill == "transport.remediate":
+            payload["structured_prompt"]["Constraints"]["bulk_reset_allowed"] = True
+        envelope = self.gateway.sign(payload, template, self.incident, self.registry)
+        if self.scenario == "prompt-tampered" and activity == "Task_Prioritize":
+            envelope["payload"]["structured_prompt"]["Target Object"][
+                "transport_id"
+            ] = "OUT-OF-SCOPE"
+        checked = self.gateway.verify(envelope, card["agent_id"])
+        wire = {
+            "jsonrpc": "2.0",
+            "method": "message/send",
+            "params": {"message": {"metadata": {"local_a2at_profile": envelope}}},
+        }
+        self.messages.append(wire)
+        result = self.twin.execute(checked["skill"], checked["evidence"])
+        self.audit.append(
+            "execute",
+            card["agent_id"],
+            template["description"],
+            activity=template["id"],
+            result=result,
+            passport_id=envelope["passport"]["id"],
+        )
+        return result, card["agent_id"]
+
+    def handoff(self, owner, activity):
+        result, receiver = self.dispatch(owner, activity, self.results)
+        self.results[activity] = result
+        if activity == "Task_Prioritize":
+            return self.handoff(receiver, "Task_HandleAndRemediate")
+        if activity == "Task_HandleAndRemediate":
+            return self.handoff(receiver, "Task_CrossDomainRemediation")
+        if activity == "Task_CrossDomainRemediation":
+            # Domain actions are ordered so an unavailable domain cannot cause a partial change.
+            for skill in ("ran.check", "core.check", "transport.remediate"):
+                self.registry.discover(skill)
+            self.audit.append(
+                "negotiate",
+                receiver,
+                "TARGET → FEASIBILITY → INFORMATION accepted in local domain policy",
+                target=self.incident.transport_id,
+                backup_path_available=True,
+                scope="incident-only",
+            )
+            for skill in ("ran.check", "core.check", "transport.remediate"):
+                result, _ = self.dispatch(receiver, activity, self.results, skill)
+                self.results[skill] = result
+            return self.handoff(receiver, "Task_ConfirmRestoration")
+        return result
+
+    def start(self):
+        self.audit.append(
+            "event",
+            "anomaly",
+            "Domain-scoped anomaly subscription matched",
+            domain="Assurance",
+            incident_id=self.incident.incident_id,
+            profile="local Event-T representation",
+        )
+        status, reason = (
+            "restored",
+            "Throughput and packet loss meet the incident closure thresholds",
+        )
+        try:
+            # Both branches complete before the prioritisation agent receives a task.
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                pending = {
+                    activity: pool.submit(self.dispatch, "anomaly", activity, {})
+                    for activity in ("Task_RCA", "Task_CEAndImpact")
+                }
+                errors = []
+                for activity, future in pending.items():
+                    try:
+                        self.results[activity] = future.result()[0]
+                    except DispatchDenied as exc:
+                        errors.append(exc)
+                if errors:
+                    raise errors[0]
+            self.audit.append(
+                "join",
+                "diagnostics",
+                "Both root-cause and subscriber-impact evidence available",
+            )
+            self.handoff("diagnostics", "Task_Prioritize")
+            if not self.results["Task_ConfirmRestoration"]["restored"]:
+                status, reason = (
+                    "escalated",
+                    "Post-change service measurements remain outside closure thresholds",
+                )
+        except DispatchDenied as exc:
+            status, reason = "awaiting-operator", str(exc)
+            self.audit.append("escalate", "operator", reason)
+        audit = self.audit.records
+        return {
+            "operator": "Almadar Aljadid",
+            "hvs": "HVS1",
+            "incident": self.incident.to_dict(),
+            "scenario": self.scenario,
+            "status": status,
+            "reason": reason,
+            "network_changed": self.twin.changed,
+            "domain_actions": self.twin.actions,
+            "results": self.results,
+            "design": self.design,
+            "registry": list(self.registry.cards.values()),
+            "governance": {
+                "scores": self.observer.scores,
+                "events": self.observer.events,
+                "mode": "advisory",
+            },
+            "messages": self.messages,
+            "audit": audit,
+            "audit_valid": verify_chain(audit),
+        }
+
+
+def run(incident=None, scenario="transport-fault"):
     if scenario not in SCENARIOS:
         raise ValueError("Unknown scenario")
-    order = Order.from_dict(vars(order or sample_order()))
-    context = str(uuid4())
-    log = AuditLog()
-    registry = registry if registry is not None else default_registry(scenario)
-    adapters = adapters if adapters is not None else SandboxAdapters(scenario)
-    service_id = None
-    results = {}
-    task_counter = 0
-
-    def dispatch(skill, intent):
-        nonlocal task_counter
-        task_counter += 1
-        try:
-            card = registry.discover(skill)
-        except LookupError as exc:
-            log.append("policy", "governance", str(exc), decision="deny", skill=skill)
-            raise
-        task = Task(context, f"{context}:{task_counter}", skill, order.site, intent,
-                    {"bandwidth_mbps": order.bandwidth_mbps, "max_latency_ms": order.max_latency_ms,
-                     "budget_lyd": order.budget_lyd, "simulation_only": True})
-        log.append("task", card.agent_id, intent, task=task.to_dict(), provider=card.provider)
-        response = adapters.execute(skill, order)
-        results[skill] = response
-        log.append("result", card.agent_id, f"{card.name} returned evidence", response=response)
-        return response
-
-    def finish(status, reason):
-        log.append("event", "orchestrator", reason, event="order.status.changed", status=status,
-                   context_id=context)
-        records = log.records
-        return {"context_id": context, "scenario": scenario, "status": status, "reason": reason,
-                "order": vars(order), "service_id": service_id, "service_active": adapters.active,
-                "results": results, "agents": [c.to_dict() for c in registry.cards],
-                "audit": records, "audit_valid": verify_chain(records), "audit_head": records[-1]["hash"]}
-
-    log.append("event", "orchestrator", "Enterprise order accepted", event="order.received", order_id=order.order_id)
-    try:
-        identity = dispatch("identity.verify", "Verify the enterprise before qualifying service")
-        if not identity["verified"]:
-            return finish("rejected", "Identity verification failed; no service changes made")
-        access = dispatch("access.qualify", "Check access circuit and customer equipment readiness")
-        if not access["ready"]:
-            log.append("negotiation", "access", "A site survey and access build are required",
-                       outcome="input-required", required_input="Operator-approved survey and construction plan")
-            return finish("awaiting-operator", "Physical access build required before service provisioning")
-        transport = dispatch("transport.qualify", "Check bandwidth, latency and transport cost")
-        if min(access["capacity_mbps"], transport["capacity_mbps"]) < order.bandwidth_mbps:
-            log.append("negotiation", "transport", "Requested bandwidth is not feasible",
-                       outcome="input-required", offered_bandwidth_mbps=transport["capacity_mbps"],
-                       requested_bandwidth_mbps=order.bandwidth_mbps)
-            return finish("awaiting-operator", "Capacity shortfall; the requested service has not been downgraded")
-        cost = access["cost_lyd"] + transport["cost_lyd"]
-        if cost > order.budget_lyd or transport["expected_latency_ms"] > order.max_latency_ms:
-            log.append("policy", "governance", "Proposed service exceeds the agreed budget or latency",
-                       decision="deny", quoted_cost_lyd=cost, expected_latency_ms=transport["expected_latency_ms"])
-            return finish("awaiting-operator", "Service proposal requires revised commercial or SLA terms")
-        log.append("policy", "governance", "Identity, access, capacity, cost and latency checks passed",
-                   decision="allow", quoted_cost_lyd=cost)
-        receipt = dispatch("service.provision", "Provision the qualified service in the sandbox")
-        service_id = receipt["service_id"]
-        validation = dispatch("service.validate", "Measure throughput and latency before confirming activation")
-        if validation["throughput_mbps"] < order.bandwidth_mbps or validation["latency_ms"] > order.max_latency_ms:
-            dispatch("service.rollback", "Revert sandbox configuration after failed activation checks")
-            return finish("rolled-back", "Activation test failed; configuration reverted for operator review")
-        return finish("completed", "Service activated after throughput and latency validation")
-    except LookupError as exc:
-        if adapters.active:
-            # Compensate using an authorised provisioner; do not bypass discovery.
-            try:
-                dispatch("service.rollback", "Revert sandbox configuration after agent discovery failure")
-            except LookupError:
-                return finish("manual-recovery", "Rollback agent unavailable; sandbox service remains configured")
-        return finish("awaiting-operator", str(exc))
+    return AssuranceSession(incident or sample_incident(), scenario).start()
